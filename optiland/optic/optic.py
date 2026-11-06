@@ -21,6 +21,7 @@ Kramer Harrison, 2024
 
 from __future__ import annotations
 
+import logging
 import warnings
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
@@ -66,6 +67,9 @@ if TYPE_CHECKING:
     from optiland.sequences.steps import RawStep
     from optiland.surfaces.standard_surface import Surface
     from optiland.visualization.coloring import ComponentColorizer, RayColorizer
+
+
+logger = logging.getLogger(__name__)
 
 
 class Optic:
@@ -783,6 +787,40 @@ class Optic:
 
         viewer = LensInfoViewer(self)
         viewer.view()
+
+    def _repr_html_(self) -> str | None:
+        """Return an HTML prescription summary for Jupyter display.
+
+        Shows the system overview, first-order properties and the surface
+        geometry table.  No real rays are traced and nothing is plotted.
+
+        Returns:
+            The HTML string, or None if the summary cannot be built, in which
+            case Jupyter falls back to the plain ``repr``.
+        """
+        try:
+            from optiland.prescription import (
+                FirstOrderSection,
+                Prescription,
+                SurfaceGeometryTableSection,
+                SystemOverviewSection,
+            )
+            from optiland.prescription.renderers.html import HtmlRenderer
+
+            document = Prescription(
+                self,
+                sections=[
+                    SystemOverviewSection(),
+                    FirstOrderSection(),
+                    SurfaceGeometryTableSection(),
+                ],
+            ).build()
+            return HtmlRenderer().render(document)
+        except Exception:
+            logger.debug(
+                "Could not build the HTML summary of the Optic.", exc_info=True
+            )
+            return None
 
     @deprecated("optic.surfaces.n(wavelength)")
     def n(self, wavelength: float | Literal["primary"] = "primary") -> BEArray:
